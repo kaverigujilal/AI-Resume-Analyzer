@@ -2,7 +2,7 @@ import os
 import json
 
 from dotenv import load_dotenv
-import google.generativeai as genai
+from google import genai
 
 
 # =========================================================
@@ -51,10 +51,8 @@ if not API_KEY:
 # CONFIGURE GEMINI
 # =========================================================
 
-genai.configure(api_key=API_KEY)
-
-model = genai.GenerativeModel(
-    "gemini-3.8-flash"
+client = genai.Client(
+    api_key=API_KEY
 )
 
 
@@ -141,7 +139,10 @@ Rules:
 
     try:
 
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model="gemini-3.8-flash",
+            contents=prompt
+        )
 
         text = response.text.strip()
 
@@ -234,6 +235,19 @@ Rules:
             raise RuntimeError(
                 "Gemini API quota has been exceeded. "
                 "Please wait for the quota to reset and try again."
+            )
+
+        if (
+            "401" in error_text
+            or "403" in error_text
+            or "API_KEY_INVALID" in error_text
+            or "API key not valid" in error_text
+        ):
+
+            raise RuntimeError(
+                "Gemini API authentication failed. "
+                "Please check the Gemini API key in "
+                "your .env file or Streamlit Secrets."
             )
 
         raise RuntimeError(
