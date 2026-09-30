@@ -6,16 +6,44 @@ import google.generativeai as genai
 
 
 # =========================================================
-# LOAD API KEY
+# LOAD ENVIRONMENT VARIABLES
 # =========================================================
 
 load_dotenv()
 
+
+# =========================================================
+# GET GEMINI API KEY
+# =========================================================
+
 API_KEY = os.getenv("GEMINI_API_KEY")
 
+
+# =========================================================
+# STREAMLIT CLOUD SECRET FALLBACK
+# =========================================================
+
 if not API_KEY:
+
+    try:
+        import streamlit as st
+
+        API_KEY = st.secrets.get("GEMINI_API_KEY")
+
+    except Exception:
+        API_KEY = None
+
+
+# =========================================================
+# CHECK API KEY
+# =========================================================
+
+if not API_KEY:
+
     raise RuntimeError(
-        "GEMINI_API_KEY not found in .env file."
+        "GEMINI_API_KEY not found. "
+        "Add it to your local .env file or "
+        "Streamlit Cloud Secrets."
     )
 
 
@@ -117,10 +145,6 @@ Rules:
 
         text = response.text.strip()
 
-        # =================================================
-        # REMOVE MARKDOWN CODE BLOCKS IF GEMINI ADDS THEM
-        # =================================================
-
         if text.startswith("```json"):
             text = text[7:]
 
@@ -132,15 +156,7 @@ Rules:
 
         text = text.strip()
 
-        # =================================================
-        # CONVERT JSON TEXT TO PYTHON DICTIONARY
-        # =================================================
-
         result = json.loads(text)
-
-        # =================================================
-        # REQUIRED FIELDS
-        # =================================================
 
         required_fields = [
             "ats_score",
@@ -159,10 +175,6 @@ Rules:
             "final_feedback"
         ]
 
-        # =================================================
-        # CHECK REQUIRED FIELDS
-        # =================================================
-
         for field in required_fields:
 
             if field not in result:
@@ -170,10 +182,6 @@ Rules:
                 raise ValueError(
                     f"Gemini response is missing field: {field}"
                 )
-
-        # =================================================
-        # MAKE SURE SCORES ARE NUMBERS
-        # =================================================
 
         score_fields = [
             "ats_score",
@@ -196,8 +204,6 @@ Rules:
 
                 result[field] = 0
 
-            # Keep scores between 0 and 100
-
             result[field] = max(
                 0,
                 min(
@@ -206,49 +212,18 @@ Rules:
                 )
             )
 
-        # =================================================
-        # CONVERT ATS SCORE TO INTEGER IF POSSIBLE
-        # =================================================
-
-        result["ats_score"] = round(
-            result["ats_score"]
-        )
-
-        result["job_match_score"] = round(
-            result["job_match_score"]
-        )
-
-        result["keyword_score"] = round(
-            result["keyword_score"]
-        )
-
-        result["skills_score"] = round(
-            result["skills_score"]
-        )
-
-        result["resume_quality_score"] = round(
-            result["resume_quality_score"]
-        )
-
-        result["experience_score"] = round(
-            result["experience_score"]
-        )
-
-        # =================================================
-        # RETURN RESULT
-        # =================================================
+        result["ats_score"] = round(result["ats_score"])
+        result["job_match_score"] = round(result["job_match_score"])
+        result["keyword_score"] = round(result["keyword_score"])
+        result["skills_score"] = round(result["skills_score"])
+        result["resume_quality_score"] = round(result["resume_quality_score"])
+        result["experience_score"] = round(result["experience_score"])
 
         return result
-
-    # =====================================================
-    # ERROR HANDLING
-    # =====================================================
 
     except Exception as e:
 
         error_text = str(e)
-
-        # Gemini quota / rate limit
 
         if (
             "429" in error_text
@@ -260,8 +235,6 @@ Rules:
                 "Gemini API quota has been exceeded. "
                 "Please wait for the quota to reset and try again."
             )
-
-        # Other Gemini errors
 
         raise RuntimeError(
             f"Gemini API error: {error_text}"
