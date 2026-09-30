@@ -140,14 +140,15 @@ Rules:
     try:
 
         response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
+            model="gemini-3.5-flash-lite",
             contents=prompt
         )
 
         text = response.text.strip()
 
+
         # =================================================
-        # REMOVE MARKDOWN CODE BLOCKS IF PRESENT
+        # REMOVE MARKDOWN CODE BLOCKS
         # =================================================
 
         if text.startswith("```json"):
@@ -163,7 +164,7 @@ Rules:
 
 
         # =================================================
-        # CONVERT JSON RESPONSE
+        # PARSE JSON
         # =================================================
 
         result = json.loads(text)
@@ -200,7 +201,7 @@ Rules:
 
 
         # =================================================
-        # VALIDATE SCORE FIELDS
+        # SCORE FIELDS
         # =================================================
 
         score_fields = [
@@ -237,26 +238,13 @@ Rules:
         # ROUND SCORES
         # =================================================
 
-        result["ats_score"] = round(
-            result["ats_score"]
-        )
-
-        result["job_match_score"] = round(
-            result["job_match_score"]
-        )
-
-        result["keyword_score"] = round(
-            result["keyword_score"]
-        )
-
-        result["skills_score"] = round(
-            result["skills_score"]
-        )
-
+        result["ats_score"] = round(result["ats_score"])
+        result["job_match_score"] = round(result["job_match_score"])
+        result["keyword_score"] = round(result["keyword_score"])
+        result["skills_score"] = round(result["skills_score"])
         result["resume_quality_score"] = round(
             result["resume_quality_score"]
         )
-
         result["experience_score"] = round(
             result["experience_score"]
         )
@@ -279,7 +267,7 @@ Rules:
 
 
         # =================================================
-        # QUOTA / RATE LIMIT ERROR
+        # QUOTA / RATE LIMIT
         # =================================================
 
         if (
@@ -295,7 +283,7 @@ Rules:
 
 
         # =================================================
-        # AUTHENTICATION ERROR
+        # AUTHENTICATION
         # =================================================
 
         if (
@@ -313,7 +301,23 @@ Rules:
 
 
         # =================================================
-        # TEMPORARY SERVER AVAILABILITY ERROR
+        # MODEL UNAVAILABLE
+        # =================================================
+
+        if (
+            "404" in error_text
+            or "NOT_FOUND" in error_text
+            or "no longer available" in error_text.lower()
+        ):
+
+            raise RuntimeError(
+                "The selected Gemini model is unavailable. "
+                "Please use a currently supported Gemini model."
+            )
+
+
+        # =================================================
+        # TEMPORARY SERVER ERROR
         # =================================================
 
         if (
@@ -329,7 +333,7 @@ Rules:
 
 
         # =================================================
-        # OTHER GEMINI ERROR
+        # OTHER ERROR
         # =================================================
 
         raise RuntimeError(
