@@ -140,11 +140,15 @@ Rules:
     try:
 
         response = client.models.generate_content(
-            model="gemini-3.8-flash",
+            model="gemini-2.5-flash-lite",
             contents=prompt
         )
 
         text = response.text.strip()
+
+        # =================================================
+        # REMOVE MARKDOWN CODE BLOCKS IF PRESENT
+        # =================================================
 
         if text.startswith("```json"):
             text = text[7:]
@@ -157,7 +161,17 @@ Rules:
 
         text = text.strip()
 
+
+        # =================================================
+        # CONVERT JSON RESPONSE
+        # =================================================
+
         result = json.loads(text)
+
+
+        # =================================================
+        # REQUIRED FIELDS
+        # =================================================
 
         required_fields = [
             "ats_score",
@@ -183,6 +197,11 @@ Rules:
                 raise ValueError(
                     f"Gemini response is missing field: {field}"
                 )
+
+
+        # =================================================
+        # VALIDATE SCORE FIELDS
+        # =================================================
 
         score_fields = [
             "ats_score",
@@ -213,18 +232,55 @@ Rules:
                 )
             )
 
-        result["ats_score"] = round(result["ats_score"])
-        result["job_match_score"] = round(result["job_match_score"])
-        result["keyword_score"] = round(result["keyword_score"])
-        result["skills_score"] = round(result["skills_score"])
-        result["resume_quality_score"] = round(result["resume_quality_score"])
-        result["experience_score"] = round(result["experience_score"])
+
+        # =================================================
+        # ROUND SCORES
+        # =================================================
+
+        result["ats_score"] = round(
+            result["ats_score"]
+        )
+
+        result["job_match_score"] = round(
+            result["job_match_score"]
+        )
+
+        result["keyword_score"] = round(
+            result["keyword_score"]
+        )
+
+        result["skills_score"] = round(
+            result["skills_score"]
+        )
+
+        result["resume_quality_score"] = round(
+            result["resume_quality_score"]
+        )
+
+        result["experience_score"] = round(
+            result["experience_score"]
+        )
+
+
+        # =================================================
+        # RETURN RESULT
+        # =================================================
 
         return result
+
+
+    # =====================================================
+    # ERROR HANDLING
+    # =====================================================
 
     except Exception as e:
 
         error_text = str(e)
+
+
+        # =================================================
+        # QUOTA / RATE LIMIT ERROR
+        # =================================================
 
         if (
             "429" in error_text
@@ -236,6 +292,11 @@ Rules:
                 "Gemini API quota has been exceeded. "
                 "Please wait for the quota to reset and try again."
             )
+
+
+        # =================================================
+        # AUTHENTICATION ERROR
+        # =================================================
 
         if (
             "401" in error_text
@@ -249,6 +310,27 @@ Rules:
                 "Please check the Gemini API key in "
                 "your .env file or Streamlit Secrets."
             )
+
+
+        # =================================================
+        # TEMPORARY SERVER AVAILABILITY ERROR
+        # =================================================
+
+        if (
+            "503" in error_text
+            or "UNAVAILABLE" in error_text
+            or "high demand" in error_text.lower()
+        ):
+
+            raise RuntimeError(
+                "Gemini is temporarily experiencing high demand. "
+                "Please try again in a few moments."
+            )
+
+
+        # =================================================
+        # OTHER GEMINI ERROR
+        # =================================================
 
         raise RuntimeError(
             f"Gemini API error: {error_text}"
