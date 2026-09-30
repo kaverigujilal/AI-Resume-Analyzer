@@ -3,6 +3,7 @@ import json
 
 from dotenv import load_dotenv
 from google import genai
+from google.genai import types
 
 
 # =========================================================
@@ -65,7 +66,7 @@ def analyze_resume(resume_text, job_description):
     prompt = f"""
 You are a professional ATS resume analyzer.
 
-Analyze the resume against the job description.
+Analyze the candidate's resume against the target job description.
 
 RESUME:
 {resume_text}
@@ -73,94 +74,114 @@ RESUME:
 JOB DESCRIPTION:
 {job_description}
 
-Return ONLY valid JSON.
+Your task is to evaluate how well the resume matches the
+specific job description.
 
-Do not use markdown.
-Do not use ```json.
-Do not add any explanation outside the JSON.
+IMPORTANT RULES:
 
-Use exactly this structure:
+1. Do not invent skills, education, experience, projects,
+   certifications, or achievements.
 
-{{
-    "ats_score": 0,
-    "job_match_score": 0,
-    "keyword_score": 0,
-    "skills_score": 0,
-    "resume_quality_score": 0,
-    "experience_score": 0,
-    "matching_skills": [],
-    "missing_skills": [],
-    "keywords": [],
-    "suitable_roles": [],
-    "strengths": [],
-    "weaknesses": [],
-    "improvements": [],
-    "final_feedback": ""
-}}
+2. Only consider a skill as a matching skill if it is
+   actually present in the resume.
 
-Rules:
+3. Missing skills should contain important requirements
+   from the job description that are not clearly present
+   in the resume.
 
-- ats_score must be a number from 0 to 100.
-- job_match_score must be a number from 0 to 100.
-- keyword_score must be a number from 0 to 100.
-- skills_score must be a number from 0 to 100.
-- resume_quality_score must be a number from 0 to 100.
-- experience_score must be a number from 0 to 100.
+4. Keywords should contain important technical and
+   professional keywords from the job description.
 
-- The ATS score should represent the overall compatibility
-  between the resume and the job description.
+5. Suitable roles must be realistic entry-level roles
+   based on the actual resume.
 
-- Do not invent skills or experience.
+6. Strengths must be based only on information present
+   in the resume.
 
-- matching_skills must contain skills that are actually
-  present in the resume and relevant to the job description.
+7. Weaknesses must be based only on information present
+   in the resume and its comparison with the job.
 
-- missing_skills should contain important skills or
-  qualifications mentioned in the job description that
-  are missing from the resume.
+8. Improvements should be practical and relevant to
+   the target job.
 
-- keywords should contain important keywords from the
-  job description.
+9. Be realistic when evaluating a student or fresher.
+   Do not penalize a student as heavily as an experienced
+   professional simply because they lack years of experience.
 
-- suitable_roles should contain realistic entry-level
-  roles based on the resume.
+10. All scores must be integers between 0 and 100.
 
-- strengths must be based only on the resume.
+SCORING GUIDELINES:
 
-- weaknesses must be based only on the resume.
+ATS score:
+Overall compatibility between the resume and job description.
 
-- improvements should be practical and relevant to the
-  target job.
+Job match score:
+How closely the candidate's background matches the job.
 
-- final_feedback should be professional and concise.
+Keyword score:
+How many important job-description keywords are represented
+in the resume.
 
-- Return valid JSON only.
+Skills score:
+How closely the candidate's technical skills match the
+required technical skills.
+
+Resume quality score:
+Quality, clarity, structure, education, projects,
+skills, contact information, links, and overall
+resume completeness.
+
+Experience score:
+Relevant projects, internships, practical work,
+certifications, GitHub/portfolio evidence, and
+other practical experience. Consider the candidate's
+student/fresher status.
+
+Return the result using exactly these fields:
+
+- ats_score
+- job_match_score
+- keyword_score
+- skills_score
+- resume_quality_score
+- experience_score
+- matching_skills
+- missing_skills
+- keywords
+- suitable_roles
+- strengths
+- weaknesses
+- improvements
+- final_feedback
+
+All list fields must contain strings.
+
+final_feedback must be a concise professional paragraph.
+
+Do not invent information that is not present in the resume.
 """
+
 
     try:
 
+        # =================================================
+        # GEMINI REQUEST
+        # =================================================
+
         response = client.models.generate_content(
             model="gemini-3.5-flash-lite",
-            contents=prompt
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
         )
 
+
+        # =================================================
+        # GET RESPONSE TEXT
+        # =================================================
+
         text = response.text.strip()
-
-
-        # =================================================
-        # REMOVE MARKDOWN CODE BLOCKS
-        # =================================================
-
-        if text.startswith("```json"):
-            text = text[7:]
-
-        elif text.startswith("```"):
-            text = text[3:]
-
-        if text.endswith("```"):
-            text = text[:-3]
-
-        text = text.strip()
 
 
         # =================================================
@@ -191,6 +212,7 @@ Rules:
             "final_feedback"
         ]
 
+
         for field in required_fields:
 
             if field not in result:
@@ -213,6 +235,7 @@ Rules:
             "experience_score"
         ]
 
+
         for field in score_fields:
 
             try:
@@ -224,6 +247,9 @@ Rules:
             except (ValueError, TypeError):
 
                 result[field] = 0
+
+
+            # Keep score between 0 and 100
 
             result[field] = max(
                 0,
@@ -238,20 +264,75 @@ Rules:
         # ROUND SCORES
         # =================================================
 
-        result["ats_score"] = round(result["ats_score"])
-        result["job_match_score"] = round(result["job_match_score"])
-        result["keyword_score"] = round(result["keyword_score"])
-        result["skills_score"] = round(result["skills_score"])
+        result["ats_score"] = round(
+            result["ats_score"]
+        )
+
+        result["job_match_score"] = round(
+            result["job_match_score"]
+        )
+
+        result["keyword_score"] = round(
+            result["keyword_score"]
+        )
+
+        result["skills_score"] = round(
+            result["skills_score"]
+        )
+
         result["resume_quality_score"] = round(
             result["resume_quality_score"]
         )
+
         result["experience_score"] = round(
             result["experience_score"]
         )
 
 
         # =================================================
-        # RETURN RESULT
+        # ENSURE LIST FIELDS ARE LISTS
+        # =================================================
+
+        list_fields = [
+            "matching_skills",
+            "missing_skills",
+            "keywords",
+            "suitable_roles",
+            "strengths",
+            "weaknesses",
+            "improvements"
+        ]
+
+
+        for field in list_fields:
+
+            if not isinstance(
+                result[field],
+                list
+            ):
+
+                result[field] = [
+                    str(result[field])
+                ]
+
+
+            result[field] = [
+                str(item)
+                for item in result[field]
+            ]
+
+
+        # =================================================
+        # ENSURE FINAL FEEDBACK IS TEXT
+        # =================================================
+
+        result["final_feedback"] = str(
+            result["final_feedback"]
+        )
+
+
+        # =================================================
+        # RETURN FINAL RESULT
         # =================================================
 
         return result
@@ -267,7 +348,7 @@ Rules:
 
 
         # =================================================
-        # QUOTA / RATE LIMIT
+        # QUOTA / RATE LIMIT ERROR
         # =================================================
 
         if (
@@ -283,7 +364,7 @@ Rules:
 
 
         # =================================================
-        # AUTHENTICATION
+        # AUTHENTICATION ERROR
         # =================================================
 
         if (
@@ -301,7 +382,7 @@ Rules:
 
 
         # =================================================
-        # MODEL UNAVAILABLE
+        # MODEL NOT FOUND / UNAVAILABLE
         # =================================================
 
         if (
@@ -333,7 +414,7 @@ Rules:
 
 
         # =================================================
-        # OTHER ERROR
+        # OTHER GEMINI ERROR
         # =================================================
 
         raise RuntimeError(
