@@ -1,45 +1,73 @@
-# AI Resume Analyzer
+# AI Resume Analyzer 🤖📄
 
-An AI-powered resume analysis application that compares a candidate's resume with a job description and provides ATS-style scoring, skill matching, keyword analysis, suitable roles, and improvement suggestions.
+An AI-powered resume analysis application that compares a candidate's resume with a target job description and provides ATS-style compatibility analysis, skill matching, keyword analysis, suitable roles, and practical improvement suggestions.
 
-## 🚀 Features
+## 🚀 Live Demo
 
-- 📄 Upload a resume in PDF format
-- 🎯 Generate an ATS compatibility score
-- 📊 Analyze job match score
-- 🔑 Identify important job-description keywords
-- 🛠️ Compare resume skills with required skills
-- ❌ Identify missing skills
-- 💼 Suggest suitable entry-level job roles
-- 💪 Identify resume strengths
-- ⚠️ Identify resume weaknesses
-- 💡 Provide practical resume improvement suggestions
-- 📑 Generate a downloadable PDF report
-- 🤖 Gemini AI analysis mode
-- 💻 Demo / Local analysis mode for testing without API usage
-- 🔐 Protect API credentials using `.env`
+**Streamlit App:**  
+https://ai-resume-analyzer-9esb9hv39tbpid5du5ac9c.streamlit.app/
+
+**GitHub Repository:**  
+https://github.com/kaverigujilal/AI-Resume-Analyzer
+
+---
+
+## ✨ Features
+
+- 📄 Upload PDF resumes
+- 🤖 AI-powered resume analysis using Google Gemini
+- 🎯 ATS compatibility score
+- 📊 Job match score
+- 🔑 Keyword match analysis
+- 🧠 Technical skills matching
+- ❌ Missing skills detection
+- 💼 Suitable entry-level role suggestions
+- 💪 Resume strengths analysis
+- ⚠️ Resume weaknesses analysis
+- 🚀 Practical resume improvement suggestions
+- 📑 Downloadable PDF analysis report
+- 💻 Demo / Local Mode without Gemini API usage
+- 🔐 Secure API-key handling using environment variables and Streamlit Secrets
+- ☁️ Streamlit Cloud deployment
+
+---
 
 ## 🛠️ Technologies Used
 
 - Python
 - Streamlit
 - Google Gemini API
+- Google GenAI SDK
 - PyMuPDF
 - ReportLab
 - python-dotenv
 - JSON
+- Git
+- GitHub
 
-## 📂 Project Structure
+---
+
+## 🧠 How It Works
 
 ```text
-AI-Resume-Analyzer/
-│
-├── app.py
-├── ai_analyzer.py
-├── demo_data.py
-├── pdf_report.py
-├── resume_parser.py
-├── app_backup.py
-├── README.md
-├── .gitignore
-└── .env
+Resume PDF
+    ↓
+PDF Text Extraction
+    ↓
+Resume + Job Description
+    ↓
+Gemini AI Analysis
+    ↓
+Structured JSON Response
+    ↓
+ATS & Skill Analysis
+    ↓
+Results Dashboard
+    ↓
+Downloadable PDF Report
+## 🔐 Gemini API Setup
+Create a `.env` file in the project folder.
+Add your Gemini API key to the `.env` file.
+GEMINI_API_KEY=your_api_key_here
+Never upload your API key to GitHub.
+The `.env` file is protected using `.gitignore`.
